@@ -69,13 +69,25 @@ class Game:
             'current_question':self.current_question,
             'question_status' :self.question_status
         }
+    def startOver(self):
+        self.status = 'not_started'
+        self.reading_timer = -1
+        self.thinking_timer = -1
+        self.waiting_timer = -1
+        self.current_question = -1
+        self.question_status = 'None'
 
-app = flask.Flask(__name__)
+
 g = Game()
+app = flask.Flask(__name__)
 CORS(app)
 app.config["DEBUG"] = True
 
+x = threading.Thread(target=loop, args=(g,))
+x.start()
+
 def loop(g):
+    print("I'M IN THE LOOP!")
     while True:
         if(g.status=='not_started'):
             g.status = 'ongoing'
@@ -106,6 +118,8 @@ def loop(g):
                     else:
                         g.question_status = 'reading'
                         g.reading_timer = g.questions[g.current_question]['audio_length']
+        elif(g.status=='finished'):
+            g.startOver()
         time.sleep(1)
 
 @app.route('/get_status', methods=['GET'])
@@ -119,6 +133,4 @@ def getQuestion():
 
 if __name__ == '__main__':
     # Threaded option to enable multiple instances for multiple user access support
-    x = threading.Thread(target=loop, args=(g,))
-    x.start()
     app.run(threaded=True, port=5000)
