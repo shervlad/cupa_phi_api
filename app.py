@@ -83,8 +83,6 @@ app = flask.Flask(__name__)
 CORS(app)
 app.config["DEBUG"] = True
 
-x = threading.Thread(target=loop, args=(g,))
-x.start()
 
 def loop(g):
     print("I'M IN THE LOOP!")
@@ -130,6 +128,8 @@ def getStatus():
 def getQuestion():
     return g.questions[g.current_question]
 
+x = threading.Thread(target=loop, args=(g,))
+x.start()
 
 if __name__ == '__main__':
     # Threaded option to enable multiple instances for multiple user access support
