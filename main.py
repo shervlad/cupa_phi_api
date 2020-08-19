@@ -119,4 +119,3 @@ def getQuestion():
 
 x = threading.Thread(target=loop, args=(g,))
 x.start()
-app.run()
