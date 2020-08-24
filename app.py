@@ -3,133 +3,166 @@ import threading
 import time
 import logging
 from flask_cors import CORS
+from questions import questions
+from flask import jsonify
+import random
+import string
+
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+
+    return result_str
+
+class Team:
+    def __init__(self):
+        self.team_name = ""
+        self.team_code = ""
+        self.record = [] #
 
 class Game:
-    def __init__(self):
-        self.status = 'not_started'
+    def __init__(self, questions_list):
+        self.status = -1
+        self.current_question = -1
+        self.question_status = -1
+        self.question_counter = -1
+        self.reading_duration = -1
+        self.thinking_duration = -1
         self.reading_timer = -1
         self.thinking_timer = -1
         self.waiting_timer = -1
-        self.current_question = -1
-        self.question_status = 'None'
-        self.questions = [
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 32,
-                'md'          :'https://i.kym-cdn.com/entries/icons/facebook/000/012/431/gig.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 40,
-                'md'          :'https://wasabi-files.lbstatic.nu/files/looks/medium/2017/07/04/5212737_IMG_20170704_202541_607.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 16,
-                'md'          :'https://i.pinimg.com/originals/76/72/1a/76721a0f8fe44970cbadedad2c891ac5.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 32,
-                'md'          :'https://i.kym-cdn.com/entries/icons/facebook/000/012/431/gig.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 40,
-                'md'          :'https://wasabi-files.lbstatic.nu/files/looks/medium/2017/07/04/5212737_IMG_20170704_202541_607.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 16,
-                'md'          :'https://i.pinimg.com/originals/76/72/1a/76721a0f8fe44970cbadedad2c891ac5.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 32,
-                'md'          :'https://i.kym-cdn.com/entries/icons/facebook/000/012/431/gig.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 40,
-                'md'          :'https://wasabi-files.lbstatic.nu/files/looks/medium/2017/07/04/5212737_IMG_20170704_202541_607.jpg'
-            },
-            {
-                'audio'       :'https://www.dropbox.com/s/ihzkjtfc87txegf/q4.mp3?raw=1',
-                'audio_length': 16,
-                'md'          :'https://i.pinimg.com/originals/76/72/1a/76721a0f8fe44970cbadedad2c891ac5.jpg'
-            }
-        ]
+        self.questions_list = questions_list
+
+        self.rankings = {
+            'team1id' : {
+                    'teamId'   : 'asox023qe32nsdfsq', #some random string
+                    'teamName' : 'The Bilzebobs',
+                    'record'   : {'q1_id' : 0, 'q2_id' : 1, 'q3_id': 1, 'q4_id':0},
+                    'answers'  : {
+                                    'q1_id' : 'iarba verde',
+                                    'q2_id' : 'gagarin',
+                                    'q3_id' : 'frunzulita',
+                                    'q4_id' : 'busuioc'
+                                 },
+                },
+
+                'team2id' : {'q1_id' : 1, 'q2_id' : 1, 'q3_id': 0, 'q4_id':0},
+                'team3id' : {'q1_id' : 0, 'q2_id' : 0, 'q3_id': 1, 'q4_id':1}
+        }
 
     def getStatus(self):
         return {
-            'status'          :self.status,
-            'reading_timer'   :self.reading_timer,
-            'thinking_timer'  :self.thinking_timer,
-            'waiting_timer'   :self.waiting_timer,
-            'current_question':self.current_question,
-            'question_status' :self.question_status
+            'status'                  : self.status,
+            'question_counter'        : self.question_counter,
+            'question_status'         : self.question_status,
+            'reading_duration'        : self.reading_duration,
+            'reading_timer'           : self.reading_timer,
+            'thinking_duration'       : self.thinking_duration,
+            'thinking_timer'          : self.thinking_timer,
+            'waiting_timer'           : self.waiting_timer
         }
-    def startOver(self):
-        self.status = 'not_started'
-        self.reading_timer = -1
-        self.thinking_timer = -1
-        self.waiting_timer = -1
-        self.current_question = -1
-        self.question_status = 'None'
+
+    def nextQuestion(self):
+        self.question_counter += 1
+        self.current_question_id = self.questions_list[self.question_counter]['question_id']
 
 
-g = Game()
+g = Game(questions)
 app = flask.Flask(__name__)
 CORS(app)
 app.config["DEBUG"] = True
 
 
+
 def loop(g):
     print("I'M IN THE LOOP!")
     while True:
-        if(g.status=='not_started'):
-            g.status = 'ongoing'
-            g.current_question = 0
-            g.question_status = 'reading'
-            g.reading_timer = g.questions[g.current_question]['audio_length']
-
-        elif(g.status == 'ongoing'):
+        if(g.status == 'ongoing'):
             if(g.question_status == 'reading'):
-                if(g.reading_timer > 0):
-                    g.reading_timer = g.reading_timer - 1
+                print("Question is being read")
+                if(g.reading_timer < g.current_question['reading_duration']):
+                    g.reading_timer = g.reading_timer + 1
                 else:
                     g.question_status = 'thinking'
-                    g.thinking_timer = 5
+                    g.thinking_timer = 0
+
             elif(g.question_status == 'thinking'):
-                if(g.thinking_timer > 0):
-                    g.thinking_timer = g.thinking_timer - 1
+                print("people are thinking")
+                if(g.thinking_timer < g.current_question['thinking_duration']):
+                    g.thinking_timer = g.thinking_timer + 1
                 else:
                     g.question_status = 'waiting_for_answers'
-                    g.waiting_timer = 5
+                    g.waiting_timer = 0
+
             elif(g.question_status == 'waiting_for_answers'):
-                if(g.waiting_timer > 0):
-                    g.waiting_timer = g.waiting_timer - 1
+                print("waiting for answers")
+                if(g.waiting_timer < 10):
+                    g.waiting_timer = g.waiting_timer + 1
                 else:
-                    g.current_question = g.current_question + 1
-                    if(g.current_question>=len(g.questions)):
+                    g.question_couter = g.question_counter + 1
+                    g.current_question = g.questions_list[g.question_counter]
+
+                    if(g.question_counter>=len(g.questions_list)):
                         g.status = 'finished'
                     else:
                         g.question_status = 'reading'
-                        g.reading_timer = g.questions[g.current_question]['audio_length']
-        elif(g.status=='finished'):
-            g.startOver()
+                        g.reading_timer  = 0
+                        g.thinking_timer = 0
+                        g.waiting_timer  = 0
+                        g.reading_duration = g.questions_list[g.question_counter]['reading_duration']
+                        g.thinking_duration = g.questions_list[g.question_counter]['reading_duration']
+            
+        elif(g.status == 'finished'):
+            print("GAME IS FINISHED")
+            return
+
+        print(g.getStatus())
         time.sleep(1)
 
 @app.route('/get_status', methods=['GET'])
 def getStatus():
     return g.getStatus()
 
-@app.route('/get_question', methods=['GET'])
-def getQuestion():
-    return g.questions[g.current_question]
+@app.route('/get_questions', methods=['GET'])
+def getQuestions():
+    return jsonify(g.questions_list)
 
-x = threading.Thread(target=loop, args=(g,))
-x.start()
+
+@app.route('/send_answer/<team_id>/<question_id>/<answer>', methods=['GET'])
+def sendAnswer(team_id,question_id,answer):
+    verification_queue.append([team_id,question_id,answer])
+
+@app.route('/get_team_code/<team_name>', methods=['GET'])
+def generateTeamCode(team_code):
+    for t in g.rankings:
+        if(t['teamName'] == team_name):
+            return {'status' :-1,'message': 'team with this name already exists'}
+    teamId = get_random_string(5)
+    while(teamId in g.rankings):
+        teamId = get_random_string(5)
+
+    g.rankings[teamId] = {
+        'teamId'   : teamId,
+        'teamName' : team_name,
+        'record'   : [0 for q in g.questions_list],
+    }
+
+@app.route('/start_game', methods=['GET'])
+def startGame():
+    g.status = 'ongoing'
+    g.question_status = 'reading'
+    g.question_counter = 0
+    g.current_question = g.questions_list[0]
+    g.reading_timer = 0
+    g.thinking_timer = 0
+
+    x = threading.Thread(target=loop, args=(g,))
+    x.start()
+    return {'status':'game_started'}
+
+
+
+
 
 if __name__ == '__main__':
     # Threaded option to enable multiple instances for multiple user access support
